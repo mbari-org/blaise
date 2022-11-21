@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build_linux:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+    - name: Build linux
+      run: |
+        cargo build --verbose --release
+        cd target/release/
+        zip "${{github.workspace}}/blaise-linux.zip" blaise
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: blaise-linux.zip
+        path: "${{github.workspace}}/blaise-linux.zip"
+
+  build_macos:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Build macOS
+        run: |
+          cargo build --verbose --release
+          cd target/release/
+          zip "${{github.workspace}}/blaise-macos.zip" blaise
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: blaise-macos.zip
+          path: "${{github.workspace}}/blaise-macos.zip"
+
+  release:
+    needs: [build_linux, build_macos]
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set release tag
+        run: |
+          echo "RELEASE_TAG=${GITHUB_REF#*refs/tags/v}" >> $GITHUB_ENV
+
+      - name: Get linux release
+        uses: actions/download-artifact@v3
+        with:
+          name: blaise-linux.zip
+
+      - name: Get macos release
+        uses: actions/download-artifact@v3
+        with:
+          name: blaise-macos.zip
+
+      - name: Complete release
+        uses: sondreb/action-release@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          prerelease: false
+          body: ''
+          name: "Release ${{ env.RELEASE_TAG }}"
+          tag: ${{ github.ref }}
+          files: "blaise-linux.zip;blaise-macos.zip"

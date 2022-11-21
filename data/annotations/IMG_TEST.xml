@@ -1,0 +1,23 @@
+<annotation>
+    <folder>imgs</folder>
+    <filename>IMG_TEST.png</filename>
+    <size>
+        <width>400</width>
+        <height>300</height>
+        <depth>3</depth>
+    </size>
+    <segmented>0</segmented>
+    <object>
+        <name>FOO</name>
+        <pose>Unspecified</pose>
+        <truncated>0</truncated>
+        <occluded>0</occluded>
+        <difficult>0</difficult>
+        <bndbox>
+            <xmin>55</xmin>
+            <xmax>150</xmax>
+            <ymin>145</ymin>
+            <ymax>220</ymax>
+        </bndbox>
+    </object>
+</annotation>
