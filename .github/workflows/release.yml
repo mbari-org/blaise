@@ -5,6 +5,13 @@ on:
     tags:
       - 'v*'
 
+env:
+  LINUX_TARGET: x86_64-unknown-linux-musl
+  CARGO_PROFILE_RELEASE_OPT_LEVEL: 3
+  CARGO_PROFILE_RELEASE_LTO: true
+  CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 1
+  CARGO_PROFILE_RELEASE_STRIP: true
+
 jobs:
   build_linux:
     runs-on: ubuntu-latest
@@ -18,11 +25,10 @@ jobs:
         override: true
     - name: Build linux
       run: |
-        rustup target add x86_64-unknown-linux-musl
-        cargo build --release --target x86_64-unknown-linux-musl
-        cd target/x86_64-unknown-linux-musl/release/
-        strip blaise
-        zip "${{github.workspace}}/blaise-linux.zip" blaise
+        rustup target add ${{ env.LINUX_TARGET }}
+        cargo build --release --target ${{ env.LINUX_TARGET }}
+        cd target/${{ env.LINUX_TARGET }}/release/
+        zip "${{github.workspace}}/blaise-${{ env.LINUX_TARGET }}.zip" blaise
 
     - uses: actions/upload-artifact@v3
       with:
@@ -43,12 +49,12 @@ jobs:
         run: |
           cargo build --verbose --release
           cd target/release/
-          zip "${{github.workspace}}/blaise-macos.zip" blaise
+          zip "${{github.workspace}}/blaise-macos-X86_64.zip" blaise
 
       - uses: actions/upload-artifact@v3
         with:
-          name: blaise-macos.zip
-          path: "${{github.workspace}}/blaise-macos.zip"
+          name: blaise-macos-X86_64.zip
+          path: "${{github.workspace}}/blaise-macos-X86_64.zip"
 
   release:
     needs: [build_linux, build_macos]
@@ -63,12 +69,12 @@ jobs:
       - name: Get linux release
         uses: actions/download-artifact@v3
         with:
-          name: blaise-linux.zip
+          name: blaise-${{ env.LINUX_TARGET }}.zip
 
       - name: Get macos release
         uses: actions/download-artifact@v3
         with:
-          name: blaise-macos.zip
+          name: blaise-macos-X86_64.zip
 
       - name: Complete release
         uses: sondreb/action-release@main
@@ -79,4 +85,4 @@ jobs:
           body: ''
           name: "Release ${{ env.RELEASE_TAG }}"
           tag: ${{ github.ref }}
-          files: "blaise-linux.zip;blaise-macos.zip"
+          files: "blaise-${{ env.LINUX_TARGET }}.zip;blaise-macos-X86_64.zip"
