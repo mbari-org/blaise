@@ -17,23 +17,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
-        override: true
-    - name: Build linux
-      run: |
-        rustup target add ${{ env.LINUX_TARGET }}
-        cargo build --release --target ${{ env.LINUX_TARGET }}
-        cd target/${{ env.LINUX_TARGET }}/release/
-        zip "${{github.workspace}}/blaise-${{ env.LINUX_TARGET }}.zip" blaise
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Build linux
+        run: |
+          rustup target add ${{ env.LINUX_TARGET }}
+          cargo build --release --target ${{ env.LINUX_TARGET }}
+          cd target/${{ env.LINUX_TARGET }}/release/
+          zip "${{github.workspace}}/blaise-${{ env.LINUX_TARGET }}.zip" blaise
 
-    - uses: actions/upload-artifact@v3
-      with:
-        name: blaise-linux.zip
-        path: "${{github.workspace}}/blaise-linux.zip"
+      - uses: actions/upload-artifact@v3
+        with:
+          name: blaise-${{ env.LINUX_TARGET }}.zip
+          path: "${{github.workspace}}/blaise-${{ env.LINUX_TARGET }}.zip"
 
   build_macos:
     runs-on: macos-latest
@@ -49,12 +49,12 @@ jobs:
         run: |
           cargo build --verbose --release
           cd target/release/
-          zip "${{github.workspace}}/blaise-macos-X86_64.zip" blaise
+          zip "${{github.workspace}}/blaise-X86_64-macos.zip" blaise
 
       - uses: actions/upload-artifact@v3
         with:
-          name: blaise-macos-X86_64.zip
-          path: "${{github.workspace}}/blaise-macos-X86_64.zip"
+          name: blaise-X86_64-macos.zip
+          path: "${{github.workspace}}/blaise-X86_64-macos.zip"
 
   release:
     needs: [build_linux, build_macos]
@@ -74,7 +74,7 @@ jobs:
       - name: Get macos release
         uses: actions/download-artifact@v3
         with:
-          name: blaise-macos-X86_64.zip
+          name: blaise-X86_64-macos.zip
 
       - name: Complete release
         uses: sondreb/action-release@main
@@ -85,4 +85,4 @@ jobs:
           body: ''
           name: "Release ${{ env.RELEASE_TAG }}"
           tag: ${{ github.ref }}
-          files: "blaise-${{ env.LINUX_TARGET }}.zip;blaise-macos-X86_64.zip"
+          files: "blaise-${{ env.LINUX_TARGET }}.zip;blaise-X86_64-macos.zip"
