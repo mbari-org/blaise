@@ -3,10 +3,7 @@ use std::path::Path;
 
 use log::debug;
 
-pub fn load_image<Q>(path: Q) -> ImageResult<DynamicImage>
-where
-    Q: AsRef<Path>,
-{
+pub fn load_image<Q: AsRef<Path>>(path: Q) -> ImageResult<DynamicImage> {
     debug!("loading image from {:?}", path.as_ref());
     image::open(path)
 }
@@ -16,10 +13,7 @@ pub fn crop_image(img: &mut DynamicImage, x: u32, y: u32, width: u32, height: u3
     img.crop(x, y, width, height)
 }
 
-pub fn save_image<Q>(img: DynamicImage, out_path: Q)
-where
-    Q: AsRef<Path>,
-{
+pub fn save_image<Q: AsRef<Path>>(img: DynamicImage, out_path: Q) {
     debug!("saving {:?}", out_path.as_ref());
     img.save(out_path).unwrap();
 }

@@ -2,7 +2,7 @@ use clap::Parser;
 use colored::Colorize;
 use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressStyle};
 use log::debug;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs::{create_dir_all, read_to_string};
 use std::path::PathBuf;
 use std::sync::mpsc;
@@ -47,6 +47,10 @@ struct Opts {
     /// Number of threads to use (by default, all available)
     #[structopt(short = 'j', name = "N")]
     cores: Option<usize>,
+
+    /// Show summary of loaded annotations
+    #[structopt(short, long)]
+    summary: bool,
 }
 
 fn main() {
@@ -56,6 +60,9 @@ fn main() {
 
     let annotations = get_annotations(&opts.data_dir, &opts.labels);
     if !annotations.is_empty() {
+        if opts.summary {
+            show_annotation_summary(&annotations, &opts);
+        }
         let cores = opts.cores.unwrap_or_else(num_cpus::get);
         let cores = cores.min(annotations.len());
         process_annotations(&opts, &annotations, cores);
@@ -65,6 +72,55 @@ fn main() {
             println!("(Done in {})", HumanDuration(elapsed));
         }
     }
+}
+
+fn show_annotation_summary(annotations: &Vec<Annotation>, opts: &Opts) {
+    let mut labels: BTreeMap<String, usize> = BTreeMap::new();
+    let mut image_paths: BTreeMap<String, usize> = BTreeMap::new();
+    let mut total_objects = 0;
+    for annotation in annotations {
+        if let Some(objects) = &annotation.objects {
+            for object in objects {
+                let count = labels.entry(object.name.clone()).or_insert(0);
+                *count += 1;
+                total_objects += 1;
+            }
+        }
+        let count = image_paths
+            .entry(
+                annotation
+                    .get_image_path(&opts.data_dir, &opts.image_dir)
+                    .clone(),
+            )
+            .or_insert(0);
+        *count += 1;
+    }
+    let mut labels: Vec<(&String, &usize)> = labels.iter().collect();
+    labels.sort_by(|a, b| b.1.cmp(a.1));
+
+    println!("\nSummary of loaded annotations:");
+
+    println!(
+        "  {} annotations with {} objects",
+        annotations.len(),
+        total_objects
+    );
+    println!("  {} labels:", labels.len());
+    for (label, count) in labels {
+        println!("   {:>5} \"{}\"", count, label);
+    }
+
+    // if any, show image paths referenced from multiple annotations:
+    let image_paths: Vec<(&String, &usize)> = image_paths.iter().collect();
+    let multi_images = image_paths.iter().filter(|(_, v)| **v > 1);
+    let count = multi_images.clone().count();
+    if count > 0 {
+        println!("\n  Images referenced in multiple annotations:");
+        for (image, count) in multi_images.clone() {
+            println!("    {:>5}  {}", count, image);
+        }
+    }
+    println!();
 }
 
 fn progress_style() -> ProgressStyle {
@@ -84,6 +140,7 @@ fn process_annotations(opts: &Opts, annotations: &Vec<Annotation>, cores: usize)
     thread::scope(|s| {
         let m = MultiProgress::new();
         m.set_move_cursor(true);
+        m.set_draw_target(indicatif::ProgressDrawTarget::stdout_with_hz(1));
         let sty = progress_style();
 
         for th in 0..cores {
@@ -118,7 +175,8 @@ fn process_annotations(opts: &Opts, annotations: &Vec<Annotation>, cores: usize)
 
     drop(tx);
 
-    let mut by_label: HashMap<String, usize> = HashMap::new();
+    // sorted by name
+    let mut by_label: BTreeMap<String, usize> = BTreeMap::new();
     let mut sum_crops = 0usize;
     for by_label_child in &rx {
         for (label, count) in by_label_child {
@@ -160,7 +218,7 @@ fn process_section(
     by_label
 }
 
-fn show_by_label(by_label: &HashMap<String, usize>) {
+fn show_by_label(by_label: &BTreeMap<String, usize>) {
     println!("Crops by label:");
     let mut tot_crops = 0usize;
     for (label, total) in by_label {
@@ -228,11 +286,7 @@ fn process_annotation(
 
     let mut num_crops = 0usize;
 
-    let image_dir: String = match &opts.image_dir {
-        Some(dir) => dir.to_str().unwrap().to_string(),
-        None => format!("{}/{}", opts.data_dir.to_str().unwrap(), folder),
-    };
-    let image_path = format!("{}/{}", image_dir, filename);
+    let image_path = annotation.get_image_path(&opts.data_dir, &opts.image_dir);
     let mut img = if let Ok(image) = load_image(&image_path) {
         image
     } else {

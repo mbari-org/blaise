@@ -2,7 +2,7 @@
 
 A Rust implementation of [voc-cropper](https://github.com/mbari-org/voc-cropper).
 
-😲 what?! This is just an learning exercise on how things like xml parsing and basic image processing
+😲 what?! This is just a learning exercise on how things like xml parsing and basic image processing
 can be done in Rust. Along with the use of Rust mechanisms for CLI, file handling, multithreading,
 progress report, etc., it only intends to reproduce the main functionality in voc-imagecropper,
 not necessarily all its options or features (at least initially).
@@ -11,7 +11,7 @@ Notable differences wrt voc-imagecropper include:
 - cropped images retain the same format as the input images (that is, not forced to jpeg)
 - no checks for minimum size, or option for resizing
 - no summary of average of the images
-- option `-j` allows to control number of threads to use
+- option `-j` allows indicating the number of threads to use
 
 ## Installation
 
@@ -42,19 +42,20 @@ Run `just list` to see the available recipes.
 ```shell
 $ just list 
 Available recipes:
-    default                        # A convenient default for development: test and format
-    all                            # default + clippy; good to run before committing changes
-    list                           # List recipes
-    check                          # cargo check
-    test                           # Run tests
-    test-nocapture                 # Run tests with --nocapture
-    run args='-d data -o data/out' # Run program with basic example
-    format                         # Format source code
-    clippy                         # Run clippy
-    build args='--release'         # Build
-    outdated                       # Show outdated dependencies
-    udeps                          # Find unused dependencies
-    update                         # cargo update
+    default                 # A convenient default for development: test and format
+    all                     # default + clippy; good to run before committing changes
+    list                    # List recipes
+    check                   # cargo check
+    test                    # Run tests
+    test-nocapture          # Run tests with --nocapture
+    run *args='-d data -o data/out' # Run program with basic example
+    format                  # Format source code
+    clippy                  # Run clippy
+    build *args='--release' # Build
+    install                 # Install
+    outdated                # Show outdated dependencies
+    udeps                   # Find unused dependencies
+    update                  # cargo update
 ```
 
 In particular, be sure to run `just all`
