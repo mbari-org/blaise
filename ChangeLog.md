@@ -1,3 +1,7 @@
+2022-12
+
+- refactoring toward enabling other annotation formats
+
 2022-11
 
 - some general adjustments;  new --summary option

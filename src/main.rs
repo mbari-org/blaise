@@ -10,11 +10,12 @@ use std::thread;
 use std::time::{Duration, Instant};
 use walkdir::WalkDir;
 
-use crate::annotation::{parse_xml, Annotation, Bndbox, CoordVal, Object};
+use crate::annotation::{Annotation, Bndbox, Object};
 use crate::image::{crop_image, load_image, save_image};
 
 mod annotation;
 mod image;
+mod pascal;
 
 #[derive(clap::StructOpt, Debug)]
 #[structopt(global_setting(clap::AppSettings::ColoredHelp))]
@@ -246,11 +247,14 @@ fn get_annotations(data_dir: &PathBuf, labels: &Option<Vec<String>>) -> Vec<Anno
         let path = entry.path();
         if path.is_file() && path.extension() == Some("xml".as_ref()) {
             let src = read_to_string(entry.path()).unwrap();
-            match parse_xml(src.as_str()) {
-                Ok(annotation) => match annotation.with_filtered_objects(labels) {
-                    Some(annotation) => annotations.push(annotation),
-                    None => skipped += 1,
-                },
+            match pascal::parse_xml(src.as_str()) {
+                Ok(pascal_voc) => {
+                    let annotation: Annotation = pascal_voc.into();
+                    match annotation.with_filtered_objects(labels) {
+                        Some(annotation) => annotations.push(annotation),
+                        None => skipped += 1,
+                    }
+                }
                 Err(_) => invalid += 1,
             }
         }
@@ -276,7 +280,6 @@ fn process_annotation(
     let Annotation {
         folder,
         filename,
-        size: _,
         objects,
     } = annotation;
 
@@ -298,12 +301,11 @@ fn process_annotation(
         let Object { name, bndbox } = object;
         debug!("object: i={} name={}", i, name);
         let Bndbox {
-            xmin: CoordVal(xmin),
-            ymin: CoordVal(ymin),
-            xmax: CoordVal(xmax),
-            ymax: CoordVal(ymax),
+            xmin,
+            ymin,
+            xmax,
+            ymax,
         } = bndbox;
-
         let x = *xmin;
         let y = *ymin;
         let width = xmax - xmin;
