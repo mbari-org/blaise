@@ -1,5 +1,10 @@
 2022-12
 
+- added `--yolo` option
+  Initial tests with a small sample from the 315K dataset (not included in this repo):
+  ```shell
+  just rrun -y data/mbari_training_data_315k_SAMPLE/images data/mbari_training_data_315k_SAMPLE/labels data/mbari_training_data_315k_SAMPLE/yolo.names -o data/mbari_training_data_315k_SAMPLE/out
+  ``` 
 - refactoring toward enabling other annotation formats
 
 2022-11

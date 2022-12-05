@@ -4,15 +4,17 @@ version = "0.1.4"
 authors = [
     "Carlos A. Rueda <carueda@mbari.org>",
 ]
-description = "Creates crops from PASCAL files annotated data"
+description = "Creates image crops for given annotations"
+repository = "https://github.com/mbari-org/blaise"
+license = "MIT OR Apache-2.0"
 
 edition = "2021"
 
 [dependencies]
 clap = { version = "3.2.23", features = ["derive"] }
-colored = "2.0.0"
-env_logger = "0.9.3"
+env_logger = "0.10.0"
 image = { version = "0.23", features = ["png", "jpeg"] }
+imagesize = "0.10"
 indicatif = "0.17.0"
 log = { version = "0.4.14" }
 num_cpus = "1"
@@ -23,3 +25,4 @@ walkdir = "2.3.2"
 
 [dev-dependencies]
 pretty_assertions = "1"
+approx = "0.5.1"

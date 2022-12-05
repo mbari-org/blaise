@@ -1,5 +1,4 @@
 use serde::Deserialize;
-use std::path::{Path, PathBuf};
 
 #[derive(Debug, Deserialize, PartialEq, Eq)]
 pub struct Annotation {
@@ -49,13 +48,5 @@ impl Annotation {
             }
             None => None,
         }
-    }
-
-    pub fn get_image_path(&self, data_dir: &Path, image_dir: &Option<PathBuf>) -> String {
-        let image_dir: String = match &image_dir {
-            Some(dir) => dir.to_str().unwrap().to_string(),
-            None => format!("{}/{}", data_dir.to_str().unwrap(), self.folder),
-        };
-        format!("{}/{}", image_dir, self.filename)
     }
 }

@@ -1,5 +1,4 @@
 use clap::Parser;
-use colored::Colorize;
 use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressStyle};
 use log::debug;
 use std::collections::{BTreeMap, HashMap};
@@ -8,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
-use walkdir::WalkDir;
+use walkdir::{DirEntry, WalkDir};
 
 use crate::annotation::{Annotation, Bndbox, Object};
 use crate::image::{crop_image, load_image, save_image};
@@ -16,42 +15,43 @@ use crate::image::{crop_image, load_image, save_image};
 mod annotation;
 mod image;
 mod pascal;
+mod yolo;
 
-#[derive(clap::StructOpt, Debug)]
+#[derive(clap::Parser, Debug)]
 #[structopt(global_setting(clap::AppSettings::ColoredHelp))]
-#[clap(version, about = "Creates crops from PASCAL files annotated data", long_about = None)]
+#[clap(version, about = "Creates image crops for given annotations", long_about = None)]
 struct Opts {
-    /// Root directory to raw dataset
-    #[clap(short, long, parse(from_os_str))]
-    data_dir: PathBuf,
+    /// Base directory to scan for pascal voc annotations
+    #[clap(short, long, value_name = "dir", parse(from_os_str))]
+    pascal: Option<PathBuf>,
 
-    /// Comma separated list of labels to crop. Defaults to everything
-    #[clap(short, long, use_delimiter = true)]
-    labels: Option<Vec<String>>,
+    /// Use yolo annotations
+    #[clap(short, long, value_names = &["image-dir", "label-dir", "names-file"], number_of_values = 3, parse(from_os_str))]
+    yolo: Option<Vec<PathBuf>>,
 
-    /// Alternative image directory with input images
-    #[clap(short, long, parse(from_os_str))]
+    /// Image base directory
+    #[clap(short, long, value_name = "dir", parse(from_os_str))]
     image_dir: Option<PathBuf>,
 
+    /// Comma separated list of labels to crop. Defaults to everything
+    #[clap(short = 'L', long, value_name = "labels", use_delimiter = true)]
+    select_labels: Option<Vec<String>>,
+
     /// Path to store image crops
-    #[clap(short, long, parse(from_os_str))]
+    #[clap(short, long, value_name = "dir", parse(from_os_str))]
     output_dir: PathBuf,
 
     /// Verbose output (disables progress bars)
-    #[structopt(long)]
+    #[clap(long)]
     verbose: bool,
 
     /// Do not show progress bars
-    #[structopt(long)]
+    #[clap(long)]
     npb: bool,
 
     /// Number of threads to use (by default, all available)
-    #[structopt(short = 'j', name = "N")]
+    #[clap(short = 'j', name = "N")]
     cores: Option<usize>,
-
-    /// Show summary of loaded annotations
-    #[structopt(short, long)]
-    summary: bool,
 }
 
 fn main() {
@@ -59,20 +59,175 @@ fn main() {
     env_logger::init();
     let opts = Opts::parse();
 
-    let annotations = get_annotations(&opts.data_dir, &opts.labels);
+    let annotations = get_annotations(&opts);
     if !annotations.is_empty() {
-        if opts.summary {
-            show_annotation_summary(&annotations, &opts);
-        }
-        let cores = opts.cores.unwrap_or_else(num_cpus::get);
-        let cores = cores.min(annotations.len());
-        process_annotations(&opts, &annotations, cores);
+        show_annotation_summary(&annotations, &opts);
+        process_annotations(&opts, &annotations, started);
+    }
+}
 
-        let elapsed = started.elapsed();
-        if elapsed > Duration::from_secs(1) {
-            println!("(Done in {})", HumanDuration(elapsed));
+/// Returns a list of all annotations according to options.
+fn get_annotations(opts: &Opts) -> Vec<Annotation> {
+    let mut annotations: Vec<Annotation> = Vec::new();
+    if opts.pascal.is_some() {
+        get_pascal_annotations(opts, &mut annotations);
+    } else {
+        get_yolo_annotations(opts, &mut annotations);
+    }
+    annotations
+}
+
+fn get_pascal_annotations(opts: &Opts, annotations: &mut Vec<Annotation>) {
+    let data_dir = &opts.pascal.as_ref().unwrap();
+    let labels = &opts.select_labels;
+    println!(
+        "getting pascal annotations under {:?}, labels: {:?}",
+        data_dir, labels
+    );
+    let mut skipped = 0u32;
+    let mut invalid = 0u32;
+
+    let walker = WalkDir::new(data_dir);
+    for entry in walker {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        if path.is_file() && path.extension() == Some("xml".as_ref()) {
+            let src = read_to_string(entry.path()).unwrap();
+            match pascal::parse_xml(src.as_str()) {
+                Ok(pascal_voc) => {
+                    let annotation: Annotation = pascal_voc.into();
+                    match annotation.with_filtered_objects(labels) {
+                        Some(annotation) => annotations.push(annotation),
+                        None => skipped += 1,
+                    }
+                }
+                Err(_) => invalid += 1,
+            }
         }
     }
+    println!(
+        "Pascal annotation files: {} to be processed, {} skipped, {} invalid",
+        annotations.len(),
+        skipped,
+        invalid
+    );
+}
+
+fn get_yolo_annotations(opts: &Opts, annotations: &mut Vec<Annotation>) {
+    let yolo = opts.yolo.as_ref().unwrap();
+    let image_dir = yolo.get(0).unwrap();
+    let yolo_dir = yolo.get(1).unwrap();
+    let yolo_names_filename = yolo.get(2).unwrap();
+    println!(
+        "processing yolo annotations with:
+          image_dir:  {:?}
+          yolo_dir:   {:?}
+          yolo_names: {:?}",
+        image_dir, yolo_dir, yolo_names_filename
+    );
+
+    let yolo_names: Vec<String> = read_to_string(yolo_names_filename)
+        .unwrap()
+        .split('\n')
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .collect();
+    println!("yolo names loaded: {}", yolo_names.len());
+
+    debug!(
+        "yolo_names({}): first few={:?}",
+        yolo_names.len(),
+        &yolo_names[0..5.min(yolo_names.len())]
+    );
+
+    let class_id_to_name = |class_id: u32| -> String {
+        if class_id < yolo_names.len() as u32 {
+            yolo_names[class_id as usize].clone()
+        } else {
+            format!("class_{}", class_id)
+        }
+    };
+
+    let labels = &opts.select_labels;
+    println!(
+        "getting yolo annotations based on image_dir {:?}",
+        image_dir
+    );
+
+    fn is_image(path: &DirEntry) -> bool {
+        static X: [&str; 3] = ["png", "jpg", "jpeg"];
+        let path = path.path();
+        path.is_file()
+            && match path.extension() {
+                Some(extension) => X.contains(&extension.to_str().unwrap()),
+                None => false,
+            }
+    }
+
+    let image_entries: Vec<DirEntry> = WalkDir::new(image_dir)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(is_image)
+        .collect();
+    println!("image files: {}", image_entries.len());
+
+    let image_filenames: Vec<(String, imagesize::ImageSize)> = image_entries
+        .into_iter()
+        .map(|e| {
+            let filename = e.file_name().to_string_lossy().into_owned();
+            let size = imagesize::size(e.path()).unwrap();
+            (filename, size)
+        })
+        .collect();
+
+    debug!(
+        "image_filenames({}): first few={:?}",
+        image_filenames.len(),
+        &image_filenames[0..5.min(image_filenames.len())]
+    );
+
+    fn replace_to_txt(e: &str) -> String {
+        let base = e
+            .rfind('.')
+            .map(|i| e[..i].to_string())
+            .unwrap_or_else(|| e.to_string());
+        base + ".txt"
+    }
+
+    let mut yolos: Vec<yolo::Yolo> = Vec::new();
+    let mut invalid = 0u32;
+    for (image_filename, image_size) in &image_filenames {
+        let yolo_filename = replace_to_txt(image_filename);
+        let path = yolo_dir.join(yolo_filename);
+        let src = read_to_string(path).unwrap();
+        match yolo::parse_yolo(
+            yolo_dir.to_string_lossy().as_ref(),
+            image_filename.as_str(),
+            image_size,
+            class_id_to_name,
+            src.as_str(),
+        ) {
+            Ok(yolo) => yolos.push(yolo),
+            Err(_) => invalid += 1,
+        }
+    }
+    debug!("yolos={:?}", yolos);
+
+    let mut skipped = 0u32;
+    for yolo in yolos {
+        let annotation: Annotation = yolo.into();
+        match annotation.with_filtered_objects(labels) {
+            Some(annotation) => annotations.push(annotation),
+            None => skipped += 1,
+        }
+    }
+
+    println!(
+        "Yolo annotation files: {} to be processed, {} skipped, {} invalid",
+        annotations.len(),
+        skipped,
+        invalid
+    );
 }
 
 fn show_annotation_summary(annotations: &Vec<Annotation>, opts: &Opts) {
@@ -88,11 +243,7 @@ fn show_annotation_summary(annotations: &Vec<Annotation>, opts: &Opts) {
             }
         }
         let count = image_paths
-            .entry(
-                annotation
-                    .get_image_path(&opts.data_dir, &opts.image_dir)
-                    .clone(),
-            )
+            .entry(get_image_path(annotation, opts).clone())
             .or_insert(0);
         *count += 1;
     }
@@ -124,12 +275,36 @@ fn show_annotation_summary(annotations: &Vec<Annotation>, opts: &Opts) {
     println!();
 }
 
+fn get_image_path(annotation: &Annotation, opts: &Opts) -> String {
+    let image_dir: String = match &opts.image_dir {
+        Some(dir) => dir.to_str().unwrap().to_string(),
+        None => match &opts.yolo {
+            Some(yolo) => yolo.get(0).unwrap().to_str().unwrap().to_string(),
+            None => {
+                let pascal_dir = opts.pascal.as_ref().unwrap();
+                format!("{}/{}", pascal_dir.to_str().unwrap(), annotation.folder)
+            }
+        },
+    };
+    format!("{}/{}", image_dir, annotation.filename)
+}
+
 fn progress_style() -> ProgressStyle {
     ProgressStyle::with_template("{prefix:.bold.dim} {bar:40.green/yellow} {pos:>7}/{len:7}")
         .unwrap()
 }
 
-fn process_annotations(opts: &Opts, annotations: &Vec<Annotation>, cores: usize) {
+fn process_annotations(opts: &Opts, annotations: &Vec<Annotation>, started: Instant) {
+    let cores = opts.cores.unwrap_or_else(num_cpus::get);
+    let cores = cores.min(annotations.len());
+    do_process_annotations(opts, annotations, cores);
+    let elapsed = started.elapsed();
+    if elapsed > Duration::from_secs(1) {
+        println!("(Done in {})", HumanDuration(elapsed));
+    }
+}
+
+fn do_process_annotations(opts: &Opts, annotations: &Vec<Annotation>, cores: usize) {
     debug!("dispatching process in {} threads", cores);
 
     let cores = cores.min(annotations.len());
@@ -200,8 +375,13 @@ fn process_section(
     let mut sum_crops = 0usize;
 
     for (i, annotation) in annotations.iter().enumerate() {
-        sum_crops +=
-            process_annotation(annotation, opts, &opts.labels, &mut by_label, opts.verbose);
+        sum_crops += process_annotation(
+            annotation,
+            opts,
+            &opts.select_labels,
+            &mut by_label,
+            opts.verbose,
+        );
 
         if let Some(ref pb) = pb {
             pb.inc(1);
@@ -230,46 +410,6 @@ fn show_by_label(by_label: &BTreeMap<String, usize>) {
     println!("  {tot_crops:>5} total");
 }
 
-/// Returns a list of all annotations under the given directory
-/// and with the indicated labels, if given.
-fn get_annotations(data_dir: &PathBuf, labels: &Option<Vec<String>>) -> Vec<Annotation> {
-    println!(
-        "Getting annotation files under {:?}, labels: {:?}",
-        data_dir, labels
-    );
-    let mut annotations: Vec<Annotation> = Vec::new();
-    let mut skipped = 0u32;
-    let mut invalid = 0u32;
-
-    let walker = WalkDir::new(data_dir);
-    for entry in walker {
-        let entry = entry.unwrap();
-        let path = entry.path();
-        if path.is_file() && path.extension() == Some("xml".as_ref()) {
-            let src = read_to_string(entry.path()).unwrap();
-            match pascal::parse_xml(src.as_str()) {
-                Ok(pascal_voc) => {
-                    let annotation: Annotation = pascal_voc.into();
-                    match annotation.with_filtered_objects(labels) {
-                        Some(annotation) => annotations.push(annotation),
-                        None => skipped += 1,
-                    }
-                }
-                Err(_) => invalid += 1,
-            }
-        }
-    }
-
-    println!(
-        "Annotation files: {} to be processed, {} skipped, {} invalid",
-        annotations.len(),
-        skipped,
-        invalid
-    );
-
-    annotations
-}
-
 fn process_annotation(
     annotation: &Annotation,
     opts: &Opts,
@@ -289,12 +429,13 @@ fn process_annotation(
 
     let mut num_crops = 0usize;
 
-    let image_path = annotation.get_image_path(&opts.data_dir, &opts.image_dir);
-    let mut img = if let Ok(image) = load_image(&image_path) {
-        image
-    } else {
-        debug!("{}", format!("failed to load image: {}", image_path).red());
-        return num_crops;
+    let image_path = get_image_path(annotation, opts);
+    let mut img = match load_image(&image_path) {
+        Ok(image) => image,
+        Err(e) => {
+            eprintln!("ERROR: failed to load image {}: {:?}", image_path, e);
+            return num_crops;
+        }
     };
 
     let mut process_object = |i: usize, object: &Object| {

@@ -2,7 +2,7 @@
 
 A Rust implementation of [voc-cropper](https://github.com/mbari-org/voc-cropper).
 
-😲 what?! This is just a learning exercise on how things like xml parsing and basic image processing
+😲 what?! This repo started as a learning exercise on how things like xml parsing and basic image processing
 can be done in Rust. Along with the use of Rust mechanisms for CLI, file handling, multithreading,
 progress report, etc., it only intends to reproduce the main functionality in voc-imagecropper,
 not necessarily all its options or features (at least initially).
@@ -11,6 +11,11 @@ Notable differences wrt voc-imagecropper include:
 - cropped images retain the same format as the input images (that is, not forced to jpeg)
 - no checks for minimum size, or option for resizing
 - no summary of average of the images
+- for location of the images, along with the `--image-dir` option, only the `filename` attribute
+  is used from the xml 
+- blaise can also ingest annotations in Yolo format (option `--yolo`)
+  (translation logic adopted from [yolo_to_voc.py](
+   https://bitbucket.org/mbari/m3-download/src/main/scripts/yolo_to_voc.py))
 - option `-j` allows indicating the number of threads to use
 
 ## Installation
@@ -48,7 +53,9 @@ Available recipes:
     check                   # cargo check
     test                    # Run tests
     test-nocapture          # Run tests with --nocapture
-    run *args='-d data -o data/out' # Run program with basic example
+    run *args='-p data -o data/out' # Run program with basic example
+    rrun *args='-p data -o data/out' # Run program in release mode
+    tgz                     # Package source code
     format                  # Format source code
     clippy                  # Run clippy
     build *args='--release' # Build

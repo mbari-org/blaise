@@ -14,8 +14,9 @@ pub fn crop_image(img: &mut DynamicImage, x: u32, y: u32, width: u32, height: u3
 }
 
 pub fn save_image<Q: AsRef<Path>>(img: DynamicImage, out_path: Q) {
-    debug!("saving {:?}", out_path.as_ref());
-    img.save(out_path).unwrap();
+    if let Err(e) = img.save(&out_path) {
+        eprintln!("error saving {:?}: {:?}", out_path.as_ref(), e);
+    }
 }
 
 #[cfg(test)]

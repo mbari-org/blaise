@@ -1,2 +1,4 @@
 target/
 data/out
+data/mbari_training_data_315k_SAMPLE/
+*.tgz

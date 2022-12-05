@@ -21,8 +21,18 @@ test-nocapture:
     cargo test -- --nocapture
 
 # Run program with basic example
-run *args='-d data -o data/out':
+run *args='-p data -o data/out':
+    cargo run -- {{args}}
+
+# Run program in release mode
+rrun *args:
     cargo run --release -- {{args}}
+
+# Package source code
+tgz:
+    #!/usr/bin/env bash
+    HASH=$(git rev-parse --short HEAD)
+    tar zcf blaise-src-${HASH}.tgz --exclude-from .gitignore .
 
 # Format source code
 format:
@@ -37,7 +47,7 @@ build *args='--release':
     cargo build {{ args }}
 
 # Install
-install:
+install: build
     cargo install --path .
 
 # (cargo install --locked cargo-outdated)
