@@ -33,7 +33,7 @@ struct Opts {
     #[clap(short, long, value_name = "dir", parse(from_os_str))]
     image_dir: Option<PathBuf>,
 
-    /// Resize to resulting crop
+    /// Resize the resulting crops (aspect ratio not necessarily preserved)
     #[clap(short, long, value_names = &["width", "height"], number_of_values = 2)]
     resize: Option<Vec<u32>>,
 
