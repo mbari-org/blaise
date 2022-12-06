@@ -13,6 +13,11 @@ pub fn crop_image(img: &mut DynamicImage, x: u32, y: u32, width: u32, height: u3
     img.crop(x, y, width, height)
 }
 
+pub fn resize_image(img: &DynamicImage, width: u32, height: u32) -> DynamicImage {
+    debug!("resizing image ...");
+    img.resize_exact(width, height, image::imageops::FilterType::Lanczos3)
+}
+
 pub fn save_image<Q: AsRef<Path>>(img: DynamicImage, out_path: Q) {
     if let Err(e) = img.save(&out_path) {
         eprintln!("error saving {:?}: {:?}", out_path.as_ref(), e);

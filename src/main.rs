@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 use walkdir::{DirEntry, WalkDir};
 
 use crate::annotation::{Annotation, Bndbox, Object};
-use crate::image::{crop_image, load_image, save_image};
+use crate::image::{crop_image, load_image, resize_image, save_image};
 
 mod annotation;
 mod image;
@@ -32,6 +32,10 @@ struct Opts {
     /// Image base directory
     #[clap(short, long, value_name = "dir", parse(from_os_str))]
     image_dir: Option<PathBuf>,
+
+    /// Resize to resulting crop
+    #[clap(short, long, value_names = &["width", "height"], number_of_values = 2)]
+    resize: Option<Vec<u32>>,
 
     /// Comma separated list of labels to crop. Defaults to everything
     #[clap(short = 'L', long, value_name = "labels", use_delimiter = true)]
@@ -462,7 +466,14 @@ fn process_annotation(
             );
         }
         let cropped = crop_image(&mut img, x, y, width, height);
-        save_image(cropped, out_path);
+        if let Some(r) = &opts.resize {
+            let width = *r.first().unwrap();
+            let height = *r.get(1).unwrap();
+            let resized = resize_image(&cropped, width, height);
+            save_image(resized, &out_path);
+        } else {
+            save_image(cropped, out_path);
+        }
         num_crops += 1;
 
         by_label

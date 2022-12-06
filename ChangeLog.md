@@ -1,5 +1,9 @@
 2022-12
 
+- added `--resize <width> <height>` option.
+  This uses `resize_exact` (thus not preserving aspect ratio).
+  Eg.,: `just run -p data -o data/out --resize 256 256`
+
 - added `--yolo` option
   Initial tests with a small sample from the 315K dataset (not included in this repo):
   ```shell
