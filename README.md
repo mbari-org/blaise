@@ -9,7 +9,7 @@ not necessarily all its options or features (at least initially).
 
 Notable differences wrt voc-imagecropper include:
 - cropped images retain the same format as the input images (that is, not forced to jpeg)
-- no checks for minimum size, or option for resizing
+- no checks for minimum size
 - no summary of average of the images
 - for location of the images, along with the `--image-dir` option, only the `filename` attribute
   is used from the xml 

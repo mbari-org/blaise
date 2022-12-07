@@ -469,8 +469,11 @@ fn process_annotation(
         if let Some(r) = &opts.resize {
             let width = *r.first().unwrap();
             let height = *r.get(1).unwrap();
-            let resized = resize_image(&cropped, width, height);
-            save_image(resized, &out_path);
+            if let Some(resized) = resize_image(&cropped, width, height) {
+                save_image(resized, &out_path);
+            } else {
+                eprintln!("WARN: not resizing empty image: {:?}", out_path);
+            }
         } else {
             save_image(cropped, out_path);
         }

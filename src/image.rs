@@ -1,4 +1,4 @@
-use image::{DynamicImage, ImageResult};
+use image::{DynamicImage, GenericImageView, ImageResult};
 use std::path::Path;
 
 use log::debug;
@@ -13,9 +13,16 @@ pub fn crop_image(img: &mut DynamicImage, x: u32, y: u32, width: u32, height: u3
     img.crop(x, y, width, height)
 }
 
-pub fn resize_image(img: &DynamicImage, width: u32, height: u32) -> DynamicImage {
-    debug!("resizing image ...");
-    img.resize_exact(width, height, image::imageops::FilterType::Lanczos3)
+pub fn resize_image(img: &DynamicImage, width: u32, height: u32) -> Option<DynamicImage> {
+    // given errors noted here, and that `resize_exact` does not return a Result,
+    // just checking for the image to not be empty:
+    if img.width() > 0u32 && img.height() > 0u32 {
+        debug!("resizing image ...");
+        let filter = image::imageops::FilterType::Lanczos3;
+        Some(img.resize_exact(width, height, filter))
+    } else {
+        None
+    }
 }
 
 pub fn save_image<Q: AsRef<Path>>(img: DynamicImage, out_path: Q) {
