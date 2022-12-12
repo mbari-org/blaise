@@ -1,5 +1,6 @@
 2022-12
 
+- added `--bb-info <csv-file>` to report size, aspect ratio of loaded bounding boxes
 - added `--resize <width> <height>` option.
   This uses `resize_exact` (thus not preserving aspect ratio).
   Eg.,: `just run -p data -o data/out --resize 256 256`

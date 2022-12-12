@@ -9,7 +9,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 use walkdir::{DirEntry, WalkDir};
 
-use crate::annotation::{Annotation, Bndbox, Object};
+use crate::annotation::{Annotation, Bndbox, BndboxItemReporter, Object};
 use crate::image::{crop_image, load_image, resize_image, save_image};
 
 mod annotation;
@@ -44,6 +44,10 @@ struct Opts {
     /// Path to store image crops
     #[clap(short, long, value_name = "dir", parse(from_os_str))]
     output_dir: PathBuf,
+
+    /// Generate csv with size, aspect ratio of loaded bounding boxes
+    #[clap(short, long, value_name = "csv-file", parse(from_os_str))]
+    bb_info: Option<PathBuf>,
 
     /// Verbose output (disables progress bars)
     #[clap(long)]
@@ -238,12 +242,18 @@ fn show_annotation_summary(annotations: &Vec<Annotation>, opts: &Opts) {
     let mut labels: BTreeMap<String, usize> = BTreeMap::new();
     let mut image_paths: BTreeMap<String, usize> = BTreeMap::new();
     let mut total_objects = 0;
+    let mut bb_reporter = BndboxItemReporter::new(
+        opts.bb_info
+            .as_ref()
+            .map(|pb| pb.to_string_lossy().to_string()),
+    );
     for annotation in annotations {
         if let Some(objects) = &annotation.objects {
             for object in objects {
                 let count = labels.entry(object.name.clone()).or_insert(0);
                 *count += 1;
                 total_objects += 1;
+                bb_reporter.add_item(annotation.filename.clone(), object);
             }
         }
         let count = image_paths
@@ -251,6 +261,7 @@ fn show_annotation_summary(annotations: &Vec<Annotation>, opts: &Opts) {
             .or_insert(0);
         *count += 1;
     }
+    bb_reporter.save();
     let mut labels: Vec<(&String, &usize)> = labels.iter().collect();
     labels.sort_by(|a, b| b.1.cmp(a.1));
 

@@ -1,4 +1,4 @@
-use image::{DynamicImage, GenericImageView, ImageResult};
+use image::{DynamicImage, ImageResult};
 use std::path::Path;
 
 use log::debug;
