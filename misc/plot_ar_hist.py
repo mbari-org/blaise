@@ -27,10 +27,10 @@ def plot_ar_hist(in_file, out_file=None):
     with pd.option_context('use_inf_as_na', True):
         aspect_ratio.dropna(how="all", inplace=True)
         dropped = num - len(aspect_ratio)
-        print(f"dropped {dropped:,} out of {num:,} NaN or inf aspect_ratio values")
+        print(f'dropped {dropped:,} out of {num:,} NaN or inf {what} values')
 
     aspect_ratio.plot(kind='hist', bins=1000, cumulative=True, histtype='step')
-    plt.xlabel('AR')
+    plt.xlabel(what)
     plt.ylabel('Count')
     plt.title(f'{what} cumulative distribution')
     plt.grid(True)
