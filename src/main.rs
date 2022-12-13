@@ -1,7 +1,7 @@
 use clap::Parser;
 use indicatif::{HumanDuration, MultiProgress, ProgressBar, ProgressStyle};
 use log::debug;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::fs::{create_dir_all, read_to_string};
 use std::path::PathBuf;
 use std::sync::mpsc;
@@ -243,8 +243,8 @@ fn get_yolo_annotations(opts: &Opts, annotations: &mut Vec<Annotation>) {
 }
 
 fn show_annotation_summary(annotations: &Vec<Annotation>, opts: &Opts) {
-    let mut labels: BTreeMap<String, usize> = BTreeMap::new();
-    let mut image_paths: BTreeMap<String, usize> = BTreeMap::new();
+    let mut labels: HashMap<String, usize> = HashMap::new();
+    let mut image_paths: HashMap<String, usize> = HashMap::new();
     let mut total_objects = 0;
     let mut bb_reporter = BndboxItemReporter::new(
         opts.bb_info
@@ -370,8 +370,7 @@ fn do_process_annotations(opts: &Opts, annotations: &Vec<Annotation>, cores: usi
 
     drop(tx);
 
-    // sorted by name
-    let mut by_label: BTreeMap<String, usize> = BTreeMap::new();
+    let mut by_label: HashMap<String, usize> = HashMap::new();
     let mut sum_crops = 0usize;
     for by_label_child in &rx {
         for (label, count) in by_label_child {
@@ -418,10 +417,11 @@ fn process_section(
     by_label
 }
 
-fn show_by_label(by_label: &BTreeMap<String, usize>) {
-    println!("Crops by label:");
+fn show_by_label(by_label: &HashMap<String, usize>) {
+    let mut labels: Vec<(&String, &usize)> = by_label.iter().collect();
+    labels.sort_by(|a, b| b.1.cmp(a.1));
     let mut tot_crops = 0usize;
-    for (label, total) in by_label {
+    for (label, total) in labels {
         let quoted = format!("\"{}\"", label);
         println!("  {total:>5} {quoted:<40}");
         tot_crops += total;

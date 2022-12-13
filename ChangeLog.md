@@ -1,5 +1,6 @@
 2022-12
 
+- show summary of resulting crops in decreasing cardinality order
 - added `--max-ar <value>` to consider bounding boxes with at most the given aspect ratio
 - added `--bb-info <csv-file>` to report size, aspect ratio of loaded bounding boxes
 - added `--resize <width> <height>` option.
