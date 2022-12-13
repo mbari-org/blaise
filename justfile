@@ -32,7 +32,7 @@ rrun *args:
 tgz:
     #!/usr/bin/env bash
     HASH=$(git rev-parse --short HEAD)
-    tar zcf blaise-src-${HASH}.tgz --exclude '.git/*' --exclude-from .gitignore .
+    git archive main -o blaise-src-${HASH}.tgz --prefix=blaise-src-${HASH}/
 
 # Format source code
 format:
