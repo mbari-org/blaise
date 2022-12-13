@@ -1,5 +1,6 @@
 2022-12
 
+- added `--max-ar <value>` to consider bounding boxes with at most the given aspect ratio
 - added `--bb-info <csv-file>` to report size, aspect ratio of loaded bounding boxes
 - added `--resize <width> <height>` option.
   This uses `resize_exact` (thus not preserving aspect ratio).

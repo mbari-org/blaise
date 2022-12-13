@@ -8,7 +8,7 @@ progress report, etc., it only intends to reproduce the main functionality in vo
 not necessarily all its options or features (at least initially).
 
 Notable differences wrt voc-imagecropper include:
-- cropped images retain the same format as the input images (that is, not forced to jpeg)
+- cropped images are written out in png format (not in jpeg)
 - no checks for minimum size
 - no summary of average of the images
 - for location of the images, along with the `--image-dir` option, only the `filename` attribute
@@ -16,7 +16,10 @@ Notable differences wrt voc-imagecropper include:
 - blaise can also ingest annotations in Yolo format (option `--yolo`)
   (translation logic adopted from [yolo_to_voc.py](
    https://bitbucket.org/mbari/m3-download/src/main/scripts/yolo_to_voc.py))
-- option `-j` allows indicating the number of threads to use
+- some additional options:
+  - `--bb-info <csv-file>`
+  - `--max-ar <value>`
+  - `-j` to indicate number of threads to use
 
 ## Installation
 

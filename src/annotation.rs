@@ -30,6 +30,10 @@ impl Bndbox {
         self.ymax - self.ymin
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.width() == 0 || self.height() == 0
+    }
+
     pub fn aspect_ratio(&self) -> f64 {
         let max = self.width().max(self.height());
         let min = self.width().min(self.height());

@@ -33,6 +33,10 @@ struct Opts {
     #[clap(short, long, value_name = "dir", parse(from_os_str))]
     image_dir: Option<PathBuf>,
 
+    /// Only process images having at most the given aspect ratio
+    #[clap(long, value_name = "AR")]
+    max_ar: Option<f64>,
+
     /// Resize the resulting crops (aspect ratio not necessarily preserved)
     #[clap(short, long, value_names = &["width", "height"], number_of_values = 2)]
     resize: Option<Vec<u32>>,
@@ -498,14 +502,22 @@ fn process_annotation(
 
     if let Some(objects) = objects {
         for (i, object) in objects.iter().enumerate() {
-            let accept_name = if let Some(labels) = &labels {
-                labels.contains(&object.name)
-            } else {
-                true
-            };
-            if accept_name {
-                process_object(i, object);
+            if object.bndbox.is_empty() {
+                continue;
             }
+            if let Some(max_ar) = &opts.max_ar {
+                let accept_ar = object.bndbox.aspect_ratio() <= *max_ar;
+                if !accept_ar {
+                    continue;
+                }
+            }
+            if let Some(labels) = &labels {
+                let accept_name = labels.contains(&object.name);
+                if !accept_name {
+                    continue;
+                }
+            };
+            process_object(i, object);
         }
     } else {
         debug!("no objects");
