@@ -50,6 +50,11 @@ build *args='--release':
 install: build
     cargo install --path .
 
+# (cargo install cargo-modules)
+# Show module tree
+tree:
+    cargo modules generate tree --with-types --with-traits --with-fns
+
 # (cargo install --locked cargo-outdated)
 # Show outdated dependencies
 outdated:
