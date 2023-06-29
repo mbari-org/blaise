@@ -1,6 +1,6 @@
 [package]
 name = "blaise"
-version = "0.1.7"
+version = "0.1.8"
 authors = [
     "Carlos A. Rueda <carueda@mbari.org>",
 ]
@@ -15,7 +15,7 @@ clap = { version = "3.2.23", features = ["derive"] }
 csv = "1.1"
 env_logger = "0.10.0"
 image = { version = "0.24.5", features = ["png", "jpeg"] }
-imagesize = "0.11.0"
+imagesize = "0.12.0"
 indicatif = "0.17.0"
 log = { version = "0.4.14" }
 num_cpus = "1"

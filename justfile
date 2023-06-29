@@ -25,7 +25,7 @@ run *args='-p data -o data/out':
     cargo run -- {{args}}
 
 # Run program in release mode
-rrun *args:
+rrun *args='-p data -o data/out':
     cargo run --release -- {{args}}
 
 # Package source code
