@@ -2,10 +2,10 @@
 
 A Rust implementation of [voc-cropper](https://github.com/mbari-org/voc-cropper).
 
-😲 what?! This repo started as a learning exercise on how things like xml parsing and basic image processing
+This repo started as a learning exercise on how things like xml parsing and basic image processing
 can be done in Rust. Along with the use of Rust mechanisms for CLI, file handling, multithreading,
-progress report, etc., it only intends to reproduce the main functionality in voc-imagecropper,
-not necessarily all its options or features (at least initially).
+progress report, etc., it only intended to reproduce the main functionality in voc-imagecropper,
+but more features were subsequently added.
 
 Notable differences wrt voc-imagecropper include:
 - cropped images are written out in png format (not in jpeg)
@@ -39,8 +39,47 @@ Then, run `blaise --help` to see the usage.
 Simple example:
 
 ```shell
-blaise -d data -o data/out
+blaise --pascal data/annotations  --image-dir data/imgs --output-dir data/out
 ```
+
+## Usage
+```shell
+blaise --help
+```
+```text
+Creates image crops for given annotations
+
+Usage: blaise [OPTIONS] --output-dir <dir>
+
+Options:
+  -p, --pascal <dir>
+          Base directory to scan for pascal voc annotations
+  -y, --yolo <image-dir> <label-dir> <names-file>
+          Use yolo annotations
+  -i, --image-dir <dir>
+          Image base directory
+      --max-ar <AR>
+          Only process images having at most the given aspect ratio
+  -r, --resize <width> <height>
+          Resize the resulting crops (aspect ratio not necessarily preserved)
+  -L, --select-labels <labels>
+          Comma separated list of labels to crop. Defaults to everything
+  -o, --output-dir <dir>
+          Path to store image crops
+  -b, --bb-info <csv-file>
+          Generate csv with size, aspect ratio of loaded bounding boxes
+      --verbose
+          Verbose output (disables progress bars)
+      --npb
+          Do not show progress bars
+  -j <N>
+          Number of threads to use (by default, all available)
+  -h, --help
+          Print help
+  -V, --version
+          Print version
+```
+
 
 ## Development
 

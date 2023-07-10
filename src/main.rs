@@ -17,20 +17,35 @@ mod image;
 mod pascal;
 mod yolo;
 
+fn cli_styles() -> clap::builder::Styles {
+    use anstyle::{
+        AnsiColor::{self, *},
+        Color, Style,
+    };
+    fn style(color: AnsiColor) -> Style {
+        Style::new().bold().fg_color(Some(Color::Ansi(color)))
+    }
+    clap::builder::Styles::styled()
+        .usage(style(Yellow).underline())
+        .header(style(Yellow).underline())
+        .literal(style(Green))
+        .placeholder(style(Blue))
+}
+
 #[derive(clap::Parser, Debug)]
-#[structopt(global_setting(clap::AppSettings::ColoredHelp))]
 #[clap(version, about = "Creates image crops for given annotations", long_about = None)]
+#[command(styles=cli_styles())]
 struct Opts {
     /// Base directory to scan for pascal voc annotations
-    #[clap(short, long, value_name = "dir", parse(from_os_str))]
+    #[clap(short, long, value_name = "dir")]
     pascal: Option<PathBuf>,
 
     /// Use yolo annotations
-    #[clap(short, long, value_names = &["image-dir", "label-dir", "names-file"], number_of_values = 3, parse(from_os_str))]
+    #[clap(short, long, value_names = &["image-dir", "label-dir", "names-file"], number_of_values = 3)]
     yolo: Option<Vec<PathBuf>>,
 
     /// Image base directory
-    #[clap(short, long, value_name = "dir", parse(from_os_str))]
+    #[clap(short, long, value_name = "dir")]
     image_dir: Option<PathBuf>,
 
     /// Only process images having at most the given aspect ratio
@@ -42,15 +57,15 @@ struct Opts {
     resize: Option<Vec<u32>>,
 
     /// Comma separated list of labels to crop. Defaults to everything
-    #[clap(short = 'L', long, value_name = "labels", use_delimiter = true)]
+    #[clap(short = 'L', long, value_name = "labels", use_value_delimiter = true)]
     select_labels: Option<Vec<String>>,
 
     /// Path to store image crops
-    #[clap(short, long, value_name = "dir", parse(from_os_str))]
+    #[clap(short, long, value_name = "dir")]
     output_dir: PathBuf,
 
     /// Generate csv with size, aspect ratio of loaded bounding boxes
-    #[clap(short, long, value_name = "csv-file", parse(from_os_str))]
+    #[clap(short, long, value_name = "csv-file")]
     bb_info: Option<PathBuf>,
 
     /// Verbose output (disables progress bars)
