@@ -61,18 +61,18 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set release tag
         run: |
           echo "RELEASE_TAG=${GITHUB_REF#*refs/tags/v}" >> $GITHUB_ENV
 
       - name: Get linux release
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: blaise-${{ env.LINUX_TARGET }}.zip
 
       - name: Get macos release
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: blaise-X86_64-macos.zip
 
