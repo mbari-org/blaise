@@ -142,7 +142,7 @@ fn get_pascal_annotations(opts: &Opts, annotations: &mut Vec<Annotation>) {
 
 fn get_yolo_annotations(opts: &Opts, annotations: &mut Vec<Annotation>) {
     let yolo = opts.yolo.as_ref().unwrap();
-    let image_dir = yolo.get(0).unwrap();
+    let image_dir = yolo.first().unwrap();
     let yolo_dir = yolo.get(1).unwrap();
     let yolo_names_filename = yolo.get(2).unwrap();
     println!(
@@ -313,7 +313,7 @@ fn get_image_path(annotation: &Annotation, opts: &Opts) -> String {
     let image_dir: String = match &opts.image_dir {
         Some(dir) => dir.to_str().unwrap().to_string(),
         None => match &opts.yolo {
-            Some(yolo) => yolo.get(0).unwrap().to_str().unwrap().to_string(),
+            Some(yolo) => yolo.first().unwrap().to_str().unwrap().to_string(),
             None => {
                 let pascal_dir = opts.pascal.as_ref().unwrap();
                 format!("{}/{}", pascal_dir.to_str().unwrap(), annotation.folder)
@@ -328,7 +328,7 @@ fn progress_style() -> ProgressStyle {
         .unwrap()
 }
 
-fn process_annotations(opts: &Opts, annotations: &Vec<Annotation>, started: Instant) {
+fn process_annotations(opts: &Opts, annotations: &[Annotation], started: Instant) {
     let cores = opts.cores.unwrap_or_else(num_cpus::get);
     let cores = cores.min(annotations.len());
     do_process_annotations(opts, annotations, cores);
@@ -338,7 +338,7 @@ fn process_annotations(opts: &Opts, annotations: &Vec<Annotation>, started: Inst
     }
 }
 
-fn do_process_annotations(opts: &Opts, annotations: &Vec<Annotation>, cores: usize) {
+fn do_process_annotations(opts: &Opts, annotations: &[Annotation], cores: usize) {
     debug!("dispatching process in {} threads", cores);
 
     let cores = cores.min(annotations.len());

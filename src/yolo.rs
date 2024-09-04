@@ -176,7 +176,7 @@ mod tests {
     #[test]
     fn yolo1() {
         let yolo = parse_yolo("D", "FN", &IMAGE_SIZE, class_id_to_name, YOLO1).unwrap();
-        let expected_objects = vec![Object {
+        let expected_objects = [Object {
             name: "class_42".to_string(),
             x: 0.38,
             y: 0.33,
@@ -193,7 +193,7 @@ mod tests {
     #[test]
     fn yolo2() {
         let yolo = parse_yolo("D", "FN", &IMAGE_SIZE, class_id_to_name, YOLO2).unwrap();
-        let expected_objects = vec![
+        let expected_objects = [
             Object {
                 name: "class_3".to_string(),
                 x: 0.2265625,

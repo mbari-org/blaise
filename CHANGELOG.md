@@ -1,5 +1,6 @@
 2024-09
 
+- clippy fixes
 - update actions; and `cargo update`
 
 2023-10
