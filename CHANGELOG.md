@@ -1,3 +1,7 @@
+2026-02
+
+- general dependency update given recent dependabot alert. 
+
 2024-09
 
 - clippy fixes

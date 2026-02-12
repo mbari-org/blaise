@@ -66,5 +66,5 @@ udeps:
     cargo +nightly udeps
 
 # cargo update
-update:
-    cargo update
+update *args='':
+    cargo update {{ args }}

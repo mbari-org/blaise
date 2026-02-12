@@ -1,7 +1,7 @@
 use crate::annotation;
 use serde::Deserialize;
-use serde_xml_rs::from_str;
 use serde_xml_rs::Error;
+use serde_xml_rs::from_str;
 
 pub fn parse_xml(src: &str) -> Result<PascalVoc, Error> {
     from_str(src)

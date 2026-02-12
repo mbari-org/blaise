@@ -32,9 +32,14 @@ fn cli_styles() -> clap::builder::Styles {
         .placeholder(style(Blue))
 }
 
+/// Creates image crops for given annotations.
+///
 #[derive(clap::Parser, Debug)]
-#[clap(version, about = "Creates image crops for given annotations", long_about = None)]
-#[command(styles=cli_styles())]
+#[command(
+    version,
+    name = "blaise",
+    styles = cli_styles(),
+)]
 struct Opts {
     /// Base directory to scan for pascal voc annotations
     #[clap(short, long, value_name = "dir")]
