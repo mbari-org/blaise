@@ -1,5 +1,6 @@
 2026-02
 
+- reduced binary size by removing unneeded image crate features
 - general dependency update given recent dependabot alert. 
 
 2024-09
