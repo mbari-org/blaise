@@ -50,6 +50,17 @@ build *args='--release':
 install: build
     cargo install --path .
 
+tags:
+  git tag -l | sort -V | tail -n5
+
+# Create and push git tag
+tag-and-push:
+  #!/usr/bin/env bash
+  version=$(tq -f Cargo.toml 'package.version')
+  echo "tagging and pushing v${version}"
+  git tag v${version}
+  git push origin v${version}
+
 # (cargo install cargo-modules)
 # Show module tree
 tree:
