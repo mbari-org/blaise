@@ -5,84 +5,87 @@ on:
     tags:
       - 'v*'
 
-env:
-  LINUX_TARGET: x86_64-unknown-linux-musl
-  CARGO_PROFILE_RELEASE_OPT_LEVEL: 3
-  CARGO_PROFILE_RELEASE_LTO: true
-  CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 1
-  CARGO_PROFILE_RELEASE_STRIP: true
+permissions:
+  contents: write
 
 jobs:
-  build_linux:
+  create-release:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - name: Build linux
-        run: |
-          rustup target add ${{ env.LINUX_TARGET }}
-          cargo build --release --target ${{ env.LINUX_TARGET }}
-          cd target/${{ env.LINUX_TARGET }}/release/
-          zip "${{github.workspace}}/blaise-${{ env.LINUX_TARGET }}.zip" blaise
-
-      - uses: actions/upload-artifact@v3
-        with:
-          name: blaise-${{ env.LINUX_TARGET }}.zip
-          path: "${{github.workspace}}/blaise-${{ env.LINUX_TARGET }}.zip"
-
-  build_macos:
-    runs-on: macos-latest
-
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - name: Build macOS
-        run: |
-          cargo build --verbose --release
-          cd target/release/
-          zip "${{github.workspace}}/blaise-X86_64-macos.zip" blaise
-
-      - uses: actions/upload-artifact@v3
-        with:
-          name: blaise-X86_64-macos.zip
-          path: "${{github.workspace}}/blaise-X86_64-macos.zip"
+          tag_name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release:
-    needs: [build_linux, build_macos]
-    runs-on: macos-latest
+    name: Build and Release
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            bin_suffix: -linux
+            use_cross: true
+
+          - os: macos-14
+            target: aarch64-apple-darwin
+            bin_suffix: -macos
+            use_cross: false
 
     steps:
-      - uses: actions/checkout@v4
       - name: Set release tag
+        run: echo "RELEASE_TAG=${GITHUB_REF#*refs/tags/v}" >> $GITHUB_ENV
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache Cargo Dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross (if needed)
+        if: matrix.use_cross == true
+        run: cargo install cross
+
+      - name: Build Binary
         run: |
-          echo "RELEASE_TAG=${GITHUB_REF#*refs/tags/v}" >> $GITHUB_ENV
+          if [[ "${{ matrix.use_cross }}" == "true" ]]; then
+            cross build --release --target ${{ matrix.target }}
+          else
+            cargo build --release --target ${{ matrix.target }}
+          fi
 
-      - name: Get linux release
-        uses: actions/download-artifact@v4
-        with:
-          name: blaise-${{ env.LINUX_TARGET }}.zip
+      - name: Rename Binary
+        run: |
+          mkdir -p dist
+          BIN=target/${{ matrix.target }}/release/blaise
+          OUT=dist/blaise-${{ env.RELEASE_TAG }}${{ matrix.bin_suffix }}
+          if [[ ! -f "$BIN" ]]; then
+            echo "Binary not found: $BIN"
+            exit 1
+          fi
+          cp "$BIN" "$OUT"
 
-      - name: Get macos release
-        uses: actions/download-artifact@v4
-        with:
-          name: blaise-X86_64-macos.zip
+      - name: Strip Binary
+        run: strip dist/blaise-${{ env.RELEASE_TAG }}${{ matrix.bin_suffix }}
 
-      - name: Complete release
-        uses: sondreb/action-release@main
+      - name: Compress Binary
+        run: gzip -9 dist/blaise-${{ env.RELEASE_TAG }}${{ matrix.bin_suffix }}
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          draft: false
-          prerelease: false
-          body: ''
-          name: "Release ${{ env.RELEASE_TAG }}"
-          tag: ${{ github.ref }}
-          files: "blaise-${{ env.LINUX_TARGET }}.zip;blaise-X86_64-macos.zip"
+          files: dist/*.gz
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
